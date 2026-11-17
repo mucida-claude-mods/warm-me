@@ -99,3 +99,21 @@ test('ping do keepwarm renova o timer só quando leu o cache', () => {
   expect(forkRenovouCache({ isAnswered: false, reason: 'aborted', usage: uso(90_000) })).toBe(true)
   expect(forkRenovouCache({ isAnswered: false, reason: 'nothing-to-fork' })).toBe(false)
 })
+
+test('a linha do warm-me sobe para o topo da faixa, as outras mantêm a ordem', async ($, on) => {
+  mock.clock(on)
+  on('command.register', () => ({ value: { command: 'warm-me' } }))
+  on('store.get', () => ({ value: 5 }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+
+  const linha = (plugin: string) => ({ plugin, tree: { type: 'Text', props: {}, children: [plugin] } })
+  const ui = await $.ui.mount({
+    ...BANDA,
+    component: 'AbovePromptList',
+    props: { ...BANDA.props, isCollapsed: false, rows: [linha('critical-decisions'), linha('warm-me'), linha('pokemon')] },
+  } as never)
+
+  // O motor empilha as linhas na ordem que sobra depois dos hooks: a primeira é a do topo.
+  expect((await ui.find({ type: 'Text' }))?.text).toBe('warm-me')
+})

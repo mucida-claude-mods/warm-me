@@ -134,4 +134,18 @@ export const register: Register = on => {
       </Box>
     )
   })
+
+  // A faixa empilha uma linha por mod na ordem de carga; um mod que carrega antes e cresce
+  // (ex.: uma lista de decisões pendentes) empurrava o fogo para fora da área visível.
+  // Aqui a linha do warm-me sobe para o topo; as outras mantêm a ordem entre si.
+  on('ui.render', { component: 'AbovePromptList' }, async ($, e, next) => {
+    const minha = e.props.rows.filter(linha => linha.plugin === 'warm-me')
+    if (minha.length === 0 || e.props.rows[0]?.plugin === 'warm-me') {
+      return next(e)
+    }
+
+    const outras = e.props.rows.filter(linha => linha.plugin !== 'warm-me')
+
+    return next({ ...e, props: { ...e.props, rows: [...minha, ...outras] } })
+  })
 }
